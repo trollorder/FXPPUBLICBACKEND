@@ -160,6 +160,24 @@ def update_video_title(username: str, s3ObjectKey: str, newTitle:str):
     collection["videos"].update_one({"s3ObjectKey": s3ObjectKey, 'belongsTo': user["_id"]}, {"$set": {"videoName": newTitle}})
     return {"message": "Video title updated successfully"}
 
+@app.get('/video-mp4-base64')
+def video_mp4_base64(username: str, s3ObjectKey: str):
+    # validate username
+    user = collection["users"].find_one({"username": username})
+    if user is None:
+        return {"error": "User not found"}
+    #  validate s3ObjectKey belongs to user
+    video = collection["videos"].find_one({"belongsTo": user["_id"], "s3ObjectKey": s3ObjectKey})
+    if video is None:
+        return {"error": "Video not found"}
+    # get video from s3
+    response = s3Client.get_object(Bucket='videos-tiktok-backend', Key=s3ObjectKey)
+    videoBinary = response['Body'].read()
+    videoBase64 = 'data:video/mp4;base64,' + base64.b64encode(videoBinary).decode('utf-8')
+    return {"videoBase64": videoBase64}
+
+                                         
+
 # endregion
 
 #region User Routes
