@@ -1,0 +1,6 @@
+from pymongo import MongoClient
+client = MongoClient("mongodb+srv://epiclist0000:qwer000011223344@fxpbackend.nqcyrjm.mongodb.net/?retryWrites=true&w=majority&appName=fxpbackend")
+collection = client["fxpbackend"]
+
+if __name__ == "__main__":
+    collection['videos'].update_many({}, {"$set": {"videoName": ''}})

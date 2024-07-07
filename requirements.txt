@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+bcrypt
+pymongo
+boto3
+openai
+opencv-python-headless
+scikit-image
+google-generativeai
