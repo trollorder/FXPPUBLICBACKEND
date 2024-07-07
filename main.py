@@ -351,8 +351,8 @@ def get_keyframes_for_video(username: str, s3ObjectKey: str):
     
 @app.post("/evaluate-transcript")
 async def evaluate_transcript(transcript: str = Body(..., media_type="text/plain")):
-    # Ensure length strictly doesnt exceed 5000 characters
-    if len(transcript) > 5000:
+    # Ensure length strictly doesnt exceed 10000 characters
+    if len(transcript) > 10000:
         return {"error": "Transcript length exceeds 5000 characters"}
     gptResponse = evaluate_transcript_gpt(transcript)
     geminiResponse = evaluate_transcript_gemini(transcript)
@@ -415,6 +415,7 @@ def save_mp3(s3ObjectKey: str, username: str, forceGeneration: bool = False):
         descriptions.append(keyframe['description'])
 
     transcript = '\n'.join(descriptions)
+    print(transcript)
     
     # check if audio transcript exists
     audio = collection["audios"].find_one({"belongsTo": user['_id'], 's3ObjectKey': s3ObjectKey})
@@ -430,15 +431,16 @@ def save_mp3(s3ObjectKey: str, username: str, forceGeneration: bool = False):
         print('Deleted existing audio')
         # continue to generate audio
     
-    # Create text-to-speech audio file
+    # # Create text-to-speech audio file
     with gptClient.audio.speech.with_streaming_response.create(
         model="tts-1",
         voice="alloy",
-        input=transcript,
+        input=transcript[:4000],
     ) as response:
         response.stream_to_file('output.mp3')
     with open('output.mp3', "rb") as f:
         audioBinary = f.read()
+
     # Save the audio file to s3
     s3Client.put_object(Bucket='videos-tiktok-backend', Key=f"audios/{s3ObjectKey.split('/')[-1]}.mp3", Body=audioBinary)
     collection["audios"].insert_one({"audioUrl": f"https://videos-tiktok-backend.s3.ap-southeast-1.amazonaws.com/audios/{s3ObjectKey.split('/')[-1]}.mp3", 'belongsTo': user['_id'], 's3ObjectKey': s3ObjectKey})
@@ -855,7 +857,7 @@ def describeImageGPT_v2(imageBinary, previousCaption = None ,additionalContext =
 
     if previousCaption:
         formattedMessages = [
-                {"role": "system", "content": "You are an expert in describing tiktok frames in an interesting manner for the visually impaired. The images you describe will be used to generate a transcript for a video. Exclude the creator's name and do not mention tiktok. If you see a frame that shows tiktok logo only, you can ignore that frame and just say the video ends"},
+                {"role": "system", "content": "You are an expert in describing tiktok frames in an interesting manner for the visually impaired. The images you describe will be used to generate a transcript for a video. Exclude the creator's name and do not mention tiktok. Keep it to less than 30 words per frame. If you see a frame that shows tiktok logo only, you can ignore that frame and just say the video ends"},
                 {"role": "user", "content": [
                     {"type": "text", "text": f'There was a previous image and this was the caption: {previousCaption}'},
                     {"type": "text", "text": "Describe the image below which is the next scene after the previous image in an interesting and captivating manner that is short and succinct."},
